@@ -1,0 +1,10 @@
+﻿PyMuPDF
+pillow
+requests
+tqdm
+google-genai
+ipykernel
+numpy
+opencv-python-headless
+python-dotenv
+pydantic
