@@ -56,10 +56,13 @@ def flag_multi_marker_footnotes(segments: List[dict]) -> List[dict]:
     return updated
 
 
-def iter_document_pages(input_path: str, render_dpi: int = 300):
+def iter_document_pages(input_path: str, render_dpi: int = 300, max_pages: int | None = None):
     suffix = Path(input_path).suffix.lower()
     if suffix == ".pdf":
-        yield from pdf_to_page_images(input_path, dpi=render_dpi)
+        for index, page in enumerate(pdf_to_page_images(input_path, dpi=render_dpi), start=1):
+            if max_pages is not None and index > max_pages:
+                break
+            yield page
         return
 
     if suffix in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}:
@@ -75,6 +78,7 @@ def process_book(
     language_hints: List[str],
     output_root: str = "output",
     render_dpi: int = 300,
+    max_pages: int | None = None,
 ):
     provider = build_ocr_provider()
     segmenter = build_segmenter()
@@ -93,7 +97,9 @@ def process_book(
     file_hash = sha256_of_file(input_path)
     book_pages = []
 
-    for page_num, png_bytes, width, height in iter_document_pages(input_path, render_dpi=render_dpi):
+    for page_num, png_bytes, width, height in iter_document_pages(
+        input_path, render_dpi=render_dpi, max_pages=max_pages
+    ):
         page_id = f"{book_id}_p{page_num:04d}"
         txt_path = pages_dir / f"{page_id}.txt"
         json_path = pages_dir / f"{page_id}.json"
@@ -224,6 +230,7 @@ def parse_args():
     )
     parser.add_argument("--output-root", default="output", help="Root directory for generated outputs.")
     parser.add_argument("--render-dpi", type=int, default=300, help="Render DPI for PDF inputs.")
+    parser.add_argument("--max-pages", type=int, default=None, help="Only process this many pages from the input.")
     return parser.parse_args()
 
 
@@ -235,4 +242,6 @@ if __name__ == "__main__":
         language_hints=args.language_hints or ["ar"],
         output_root=args.output_root,
         render_dpi=args.render_dpi,
+        max_pages=args.max_pages,
     )
+
